@@ -1,0 +1,20 @@
+menu "点灯配置"
+    config LED_GPIO_NUM
+        int
+        prompt "ESP连接LED的GPIO号码"
+        range 0 39
+        default 2
+        help
+            通常出现于板子的边缘 
+    config DELAY_TIME_MS
+        int
+        prompt "闪烁时间  ms为单位"
+        range 100 10000
+        default 1000
+        help
+            通常出现于板子的边缘 
+        
+
+
+
+endmenu
