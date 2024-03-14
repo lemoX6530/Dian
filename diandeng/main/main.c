@@ -14,12 +14,12 @@ int count=0;
 
 void app_main(void)
 {
-    gpio_reset_pin(LED_PIN);  //重启第2GPIO端口
+    gpio_reset_pin(LED_PIN);  //重启GPIO2
     gpio_set_direction(LED_PIN,GPIO_MODE_OUTPUT);
     while(count<=10){
         count++;
         status = !status;  //取非
-        gpio_set_level(LED_PIN,status);   //第2GPIO端口反复输出高/低电平
+        gpio_set_level(LED_PIN,status);   //GPIO2反复输出高/低电平
         ESP_LOGI("现在是","%s",status == true ? "灯亮" : "灯灭");
         vTaskDelay(DELAY_MS/10);  //delay一段时间
     }

@@ -16,7 +16,19 @@
     "idf.toolsPathWin": "D:\\Esspressiftool\\Espressif",
     "idf.flashType": "UART",
     "files.associations": {
-        "esp_log.h": "c",
-        "task.h": "c"
+        "system_internal.h": "c",
+        "esp_system.h": "c",
+        "esp_attr.h": "c",
+        "esp_err.h": "c",
+        "esp_heap_caps.h": "c",
+        "stdbool.h": "c",
+        "esp_idf_version.h": "c",
+        "stdint.h": "c",
+        "stdlib.h": "c",
+        "sdkconfig.h": "c",
+        "multi_heap.h": "c",
+        "esp_compiler.h": "c",
+        "esp_bit_defs.h": "c",
+        "i2c.h": "c"
     }
 }

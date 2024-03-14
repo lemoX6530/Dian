@@ -510,13 +510,6 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# 点灯配置
-#
-CONFIG_LED_GPIO_NUM=2
-CONFIG_DELAY_TIME_MS=1000
-# end of 点灯配置
-
-#
 # Compiler options
 #
 CONFIG_COMPILER_OPTIMIZATION_DEBUG=y
