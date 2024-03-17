@@ -1,0 +1,38 @@
+menu "网络连接配置"
+
+    config ESP_WIFI_SSID
+        string 
+        prompt "网络名称SSID"
+        default "P50E"
+        help
+            输入网络名称
+
+    config ESP_WIFI_PASSWORD
+        string 
+        prompt "网络密码"
+        default "1q2w3e4r5t"
+        help
+            输入网络密码,通常大于8位
+
+    config TCP_SERVER_ADRESS
+        string 
+        prompt "服务器地址"
+        default "192.168.43.112"
+        help
+            板子作为客户端时将要连接的服务器地址
+    config TCP_SERVER_PORT
+        int
+        prompt "服务器端口"
+        range 1024 65536
+        default 5200
+        help
+            板子作为客户端时将要连接的服务器端口(默认5200)
+    config TCP_CLIENT_PORT
+        int
+        prompt "客户端端口"
+        range 1024 65536
+        default 5000
+        help
+            板子作为服务端时客户端要连接的端口(默认5000)
+
+endmenu
