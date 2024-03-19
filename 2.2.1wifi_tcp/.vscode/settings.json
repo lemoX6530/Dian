@@ -22,7 +22,8 @@
         "esp_wifi.h": "c",
         "sockets.h": "c",
         "esp_event.h": "c",
-        "sys.h": "c"
+        "sys.h": "c",
+        "esp_system.h": "c"
     },
     "idf.flashType": "UART"
 }

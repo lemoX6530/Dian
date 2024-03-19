@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -16,6 +15,10 @@
 #include "esp_event.h"
 #include "lwip/err.h"
 #include "lwip/sys.h"
+
+#include "driver/uart.h"
+#include "string.h"
+#include "driver/gpio.h"
 
 
 
@@ -46,6 +49,27 @@ static const char *TAG = "WIFI_TCP";
 
 //事件标志组
 EventGroupHandle_t xCreatedEventGroup_WifiConnect = NULL;
+
+static const int RX_BUF_SIZE = 1024;
+const uart_port_t uart_num = UART_NUM_0;  //uart0 1 2分别都能进行输出
+#define TXD_PIN (GPIO_NUM_43) 
+#define RXD_PIN (GPIO_NUM_44) //   ESP板子上的TX RX 分别对应的GPIO
+
+void init(void)
+{
+    const uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_APB,
+    };
+
+    uart_driver_install(uart_num, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
+    uart_param_config(uart_num, &uart_config);
+    uart_set_pin(uart_num, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+}
 
 static int retry_num = 0;
 static int client_connect_socket = 0;                     //客户端连接socket
@@ -147,6 +171,7 @@ static void vTaskTcpClient(void *pvParameters)
         while (CreateTcpClient(TCP_SERVER_ADRESS,TCP_SERVER_PORT) != ESP_OK && fail_count<=ESP_MAXIMUM_RETRY){
             ESP_LOGI("vTaskTcpClient", "connect FAIL,Retrying");
             fail_count++;
+            vTaskDelay(100 / portTICK_PERIOD_MS);
         }
         ESP_LOGI("vTaskTcpClient", "connect FAIL,Aborting");
     }
@@ -302,6 +327,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,int32_t event_i
     {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        char IPS[100]="";
+        sprintf(IPS,"%d.%d.%d.%d\n",IP2STR(&event->ip_info.ip));
+        uart_write_bytes(uart_num, (const char*)IPS, strlen(IPS));
         retry_num = 0;
         xEventGroupSetBits(xCreatedEventGroup_WifiConnect, WIFI_CONNECTED_BIT);
         xEventGroupClearBits(xCreatedEventGroup_WifiConnect, WIFI_FAIL_BIT);
@@ -350,6 +378,7 @@ void wifi_init_sta(void)
 ************************************************************************/
 void app_main()
 {    
+    init();
     //初始化NVS
    esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

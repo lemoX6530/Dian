@@ -23,6 +23,10 @@
 #include "driver/i2c.h"
 #include "esp_err.h"
 
+#include "driver/uart.h"
+#include "string.h"
+#include "driver/gpio.h"
+
 
 
 #define I2C_MASTER_NUM I2C_NUM_0
@@ -92,7 +96,7 @@ const float G_accel=9.79361;
 
 char accel_all[100]="";
 char gyro_all[100]="";
-char angle_all[100]="";
+
 
 
 //函数声明
@@ -102,7 +106,26 @@ static void vTaskTcpClient(void *pvParameters);
 static void vTaskTcpServer(void *pvParameters);
 void AppTaskCreate(void);
 
+static const int RX_BUF_SIZE = 1024;
+const uart_port_t uart_num = UART_NUM_0;  //uart0 1 2分别都能进行输出
+#define TXD_PIN (GPIO_NUM_43) 
+#define RXD_PIN (GPIO_NUM_44) //   ESP板子上的TX RX 分别对应的GPIO
 
+void init(void)
+{
+    const uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_APB,
+    };
+
+    uart_driver_install(uart_num, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
+    uart_param_config(uart_num, &uart_config);
+    uart_set_pin(uart_num, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+}
 
 
 void i2c_init()
@@ -472,12 +495,9 @@ static void vTaskTcpServer(void *pvParameters)
             while (1){
                 sprintf(accel_all,"X_ACCEL:%fm/s^2,Y_ACCEL:%fm/s^2,Z_ACCEL:%fm/s^2 \n",get_accel(1),get_accel(2),get_accel(3));
                 sprintf(gyro_all,"X_GYRO:%f°/s,Y_GYRO:%f°/s,Z_GYRO:%f°/s\n",get_gyro(1),get_gyro(2),get_gyro(3));
-                sprintf(angle_all,"X_ANGLE:%f,Y_ANGLE:%f,Z_ANGLE:%f",atan2(get_accel(2),get_accel(1))*180 / M_PI,atan2(get_accel(2),get_accel(3))*180 / M_PI,atan2(get_accel(3),get_accel(1))*180 / M_PI);
                 send(client_connect_socket, accel_all, sizeof(accel_all), 0);
                 send(client_connect_socket, gyro_all, sizeof(gyro_all), 0);
-                send(client_connect_socket, angle_all, sizeof(angle_all), 0);
                 vTaskDelay(50 / portTICK_PERIOD_MS);
-                recv(server_connect_socket, databuff, sizeof(databuff), 1);
             }
         }
         
@@ -525,6 +545,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,int32_t event_i
     {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(WIFI_TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        char IPS[100]="";
+        sprintf(IPS,"%d.%d.%d.%d\n",IP2STR(&event->ip_info.ip));
+        uart_write_bytes(uart_num, (const char*)IPS, strlen(IPS));
         retry_num = 0;
         xEventGroupSetBits(xCreatedEventGroup_WifiConnect, WIFI_CONNECTED_BIT);
         xEventGroupClearBits(xCreatedEventGroup_WifiConnect, WIFI_FAIL_BIT);
@@ -573,6 +596,7 @@ void wifi_init_sta(void)
 ************************************************************************/
 void app_main()
 {    
+    init();
     //初始化NVS
    esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

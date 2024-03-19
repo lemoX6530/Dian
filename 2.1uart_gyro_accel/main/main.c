@@ -21,11 +21,11 @@
 #define MPU_CMD_CONFIG 0x1A       // 数字低通滤波器配置寄存器
 #define MPU_CMD_GYRO_CONFIG 0x1B  // 陀螺仪配置寄存器
 #define MPU_CMD_ACCEL_CONFIG 0x1C // 加速度传感器配置寄存器
-#define MPU_CMD_ACCEL_XOUT_H 0x3B // 加速计X轴高字节数据寄存器
+#define MPU_CMD_ACCEL_XOUT_H 0x3B // 加速计三轴高字节数据寄存器
 #define MPU_CMD_ACCEL_YOUT_H 0x3D
 #define MPU_CMD_ACCEL_ZOUT_H 0x3F
-
-#define MPU_CMD_GYRO_XOUT_H 0x43 // 加速计X轴高字节数据寄存器
+#define MPU_TEMP_OUT_H 0x41
+#define MPU_CMD_GYRO_XOUT_H 0x43 // 陀螺仪三轴高字节数据寄存器
 #define MPU_CMD_GYRO_YOUT_H 0x45
 #define MPU_CMD_GYRO_ZOUT_H 0x47
 
@@ -216,6 +216,30 @@ float get_gyro(int direction)
     data_g=data_g/65536*4*500;
     return data_g;
 }
+
+float get_temp(void)
+{
+    union
+    {
+        uint8_t bytes[4];
+        int16_t value;
+    } data;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);                                                // 加入开始信号
+    i2c_master_write_byte(cmd, (MPU_ADDR << 1) | I2C_MASTER_WRITE, true); // 以写入方式发送地址
+    i2c_master_write_byte(cmd, MPU_TEMP_OUT_H, true);               // 写入寄存器地址，这个寄存器是加速度传感器 X轴 的高位地址
+    i2c_master_start(cmd);                                                // 加入开始信号
+    i2c_master_write_byte(cmd, (MPU_ADDR << 1) | I2C_MASTER_READ, true);  // 发送地址，以及读指令，命令之后需要带ACK
+    i2c_master_read_byte(cmd, &data.bytes[1], I2C_MASTER_ACK);            // 读取高位字节数据，放在后面
+    i2c_master_read_byte(cmd, &data.bytes[0], I2C_MASTER_NACK);           // 读取低位字节数据，放在前面
+    i2c_master_stop(cmd);                                                 // 加入停止信号
+    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));       // 开始发送数据
+    i2c_cmd_link_delete(cmd);
+    float data_g=data.value+0.0;
+    data_g=36.53+data_g/340;
+    return data_g;
+}
+
 void app_main(void)
 {
     i2c_init();        
@@ -224,13 +248,16 @@ void app_main(void)
     ESP_LOGI(TAG, "准备采集三轴数据:");
     char accel_all[100]="";
     char gyro_all[100]="";
+    char temp[100]="";
     vTaskDelay(100);    
     while (1)
     {
         sprintf(accel_all,"X_ACCEL:%f,Y_ACCEL:%f,Z_ACCEL:%f\n",get_accel(1),get_accel(2),get_accel(3));
         sprintf(gyro_all,"X_GYRO:%f,Y_GYRO:%f,Z_GYRO:%f\n",get_gyro(1),get_gyro(2),get_gyro(3));
+        sprintf(temp,"temperature:%f\n",get_temp());
         uart_write_bytes(uart_num, (const char*)accel_all, strlen(accel_all));
         uart_write_bytes(uart_num, (const char*)gyro_all, strlen(gyro_all));
+        uart_write_bytes(uart_num, (const char*)temp, strlen(temp));
         vTaskDelay(pdMS_TO_TICKS(100));
     }
     vTaskDelete(NULL);
